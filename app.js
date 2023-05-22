@@ -1,91 +1,77 @@
-const form = document.querySelector("form");
-const input = document.querySelector("form input");
-const msgSpan = form.querySelector(".msg");
-//.class .class vs. .class.class
-const list = document.querySelector(".container .cities");
+const container = document.querySelector('.container');
+const search = document.querySelector('.search-box button');
+const weatherBox = document.querySelector('.weather-box');
+const weatherDetails = document.querySelector('.weather-details');
+const error404 = document.querySelector('.not-found');
 
-// localStorage.setItem("apiKey", EncryptStringAES("4d8fb5b93d4af21d66a2948710284366"));
+search.addEventListener('click', () => {
 
-//html inline assign, addEventListener, onclick, setAttribute 
-form.addEventListener("submit", (e) => {
-    e.preventDefault();
-    getWeatherDataFromApi();
-    form.reset();
-    //input.value = "";
-    //target vs. currentTarget
-    //e.currentTarget.reset();
-});
+    const APIKey = '728b0ee6df5687559812bd3169ad77b7';
+    const city = document.querySelector('.search-box input').value;
 
-const getWeatherDataFromApi = async () => {
-    const apiKey = DecryptStringAES(localStorage.getItem("apiKey"));
-    console.log(apiKey);
-    const cityName = input.value;
-    const units = "metric";
-    const lang = "tr";
+    if (city === '')
+        return;
 
-    //http request url(endpoint)
-    const url = `https://api.openweathermap.org/data/2.5/weather?q=${cityName}&appid=${apiKey}&units=${units}&lang=${lang}`;
+    fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&units=metric&appid=${APIKey}`)
+        .then(response => response.json())
+        .then(json => {
 
-    try {
-        // const response = await fetch(url).then(response=>response.json());
-
-        const response = await axios(url);
-        console.log(response);
-
-        //obj. destructuring
-        const { main, name, sys, weather } = response.data;
-
-        const iconUrl = `http://openweathermap.org/img/wn/${weather[0].icon}@2x.png`;
-
-        const iconUrlAWS = `https://s3-us-west-2.amazonaws.com/s.cdpn.io/162656/${weather[0].icon}.svg`;
-        console.log(response);
-
-        const cityNameSpans = list.querySelectorAll("span");
-        //filter, map, reduce, forEach ==> array
-        //forEach => nodeList
-        if (cityNameSpans.length > 0) {
-            const filteredArray = [...cityNameSpans].filter(span => span.innerText == name);
-            if (filteredArray.length > 0) {
-                msgSpan.innerText = `You already know the weather for ${name}, Please search for another city 😉`;
-                setTimeout(() => { msgSpan.innerText = "" }, 5000);
+            if (json.cod === '404') {
+                container.style.height = '400px';
+                weatherBox.style.display = 'none';
+                weatherDetails.style.display = 'none';
+                error404.style.display = 'block';
+                error404.classList.add('fadeIn');
                 return;
             }
-        }
-        const createdLi = document.createElement("li");
-        createdLi.classList.add("city");
-        createdLi.innerHTML =
-            ` <h2 class="city-name" data-name="${name},${sys.country}">
-                <span>${name}</span>
-                <sup>${sys.country}</sup>
-          </h2>
-          <div class="city-temp">${Math.round(main.temp)}<sup>°C</sup></div>
-          <figure>
-                <img class="city-icon" src="${iconUrlAWS}">
-                <figcaption>${weather[0].description}</figcaption>
-          </figure>`;
-        //append vs. prepend
-        list.prepend(createdLi);
 
-        //Capturing => parent to child
-        list.addEventListener("click", (e) => {
-            alert("List clicked!");
+            error404.style.display = 'none';
+            error404.classList.remove('fadeIn');
+
+            const image = document.querySelector('.weather-box img');
+            const temperature = document.querySelector('.weather-box .temperature');
+            const description = document.querySelector('.weather-box .description');
+            const humidity = document.querySelector('.weather-details .humidity span');
+            const wind = document.querySelector('.weather-details .wind span');
+
+            switch (json.weather[0].main) {
+                case 'Clear':
+                    image.src = 'images/clear.png';
+                    break;
+
+                case 'Rain':
+                    image.src = 'images/rain.png';
+                    break;
+
+                case 'Snow':
+                    image.src = 'images/snow.png';
+                    break;
+
+                case 'Clouds':
+                    image.src = 'images/cloud.png';
+                    break;
+
+                case 'Haze':
+                    image.src = 'images/mist.png';
+                    break;
+
+                default:
+                    image.src = '';
+            }
+
+            temperature.innerHTML = `${parseInt(json.main.temp)}<span>°C</span>`;
+            description.innerHTML = `${json.weather[0].description}`;
+            humidity.innerHTML = `${json.main.humidity}%`;
+            wind.innerHTML = `${parseInt(json.wind.speed)}Km/h`;
+
+            weatherBox.style.display = '';
+            weatherDetails.style.display = '';
+            weatherBox.classList.add('fadeIn');
+            weatherDetails.classList.add('fadeIn');
+            container.style.height = '590px';
+
+
         });
-        //Bubbling => child to parent
-        createdLi.addEventListener("click", (e)=>{
-            // alert("li element clicked");
-            window.location.href = `https://openweathermap.org/find?q=${name}`;
-        });
 
-        // document.querySelector("figure").addEventListener("click", (e)=>{
-        //     alert("figure element clicked");
-        // });
 
-    }
-    catch (error) {
-        //error logging
-        //postErrorLog("weather.js", "getWeatherDataFromApi", date, error);
-        msgSpan.innerText = "City not found!";
-        setTimeout(() => { msgSpan.innerText = "" }, 5000);
-    }
-
-}
+});
